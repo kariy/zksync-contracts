@@ -7,6 +7,7 @@ import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 const PRIVATE_KEY: string =
 	process.env.ZKS_PRIVATE_KEY ||
 	"0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"; // privkey from the local testnet https://github.com/matter-labs/local-setup/blob/main/rich-wallets.json
+
 if (!PRIVATE_KEY) {
 	throw new Error("Please set ZKS_PRIVATE_KEY in the environment variables.");
 }
@@ -25,16 +26,6 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	// Estimate contract deployment fee
 	const greeting = "Hi there!";
 	const deploymentFee = await deployer.estimateDeployFee(artifact, [greeting]);
-
-	// // OPTIONAL: Deposit funds to L2
-	// // Comment this block if you already have funds on zkSync.
-	// const depositHandle = await deployer.zkWallet.deposit({
-	// 	to: deployer.zkWallet.address,
-	// 	token: utils.ETH_ADDRESS,
-	// 	amount: deploymentFee.mul(2),
-	// });
-	// // Wait until the deposit is processed on zkSync
-	// await depositHandle.wait();
 
 	// Deploy this contract. The returned object will be of a `Contract` type, similarly to ones in `ethers`.
 	// `greeting` is an argument for contract constructor.

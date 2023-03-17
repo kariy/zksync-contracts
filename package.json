@@ -12,7 +12,9 @@
 	"license": "ISC",
 	"devDependencies": {
 		"@matterlabs/hardhat-zksync-toolbox": "^0.1.1",
+		"@nomicfoundation/hardhat-network-helpers": "^1.0.8",
 		"@nomicfoundation/hardhat-toolbox": "^2.0.2",
-		"hardhat": "^2.13.0"
+		"hardhat": "^2.13.0",
+		"viem": "^0.1.21"
 	}
 }
