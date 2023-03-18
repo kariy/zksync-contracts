@@ -1,47 +1,43 @@
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { Wallet, Provider, utils } from "zksync-web3";
 import * as hre from "hardhat";
 import { Deployer } from "@matterlabs/hardhat-zksync-toolbox";
-import { BigNumber, ethers } from "ethers";
-import { encodeAbiParameters, parseAbiParameters } from "viem";
+import { ethers } from "ethers";
 
 import { RICH_WALLET_PK } from "./utils";
 
+async function setup() {
+	const provider = Provider.getDefaultProvider();
+	const eoa = new Wallet(RICH_WALLET_PK, provider);
+	const deployer = new Deployer(hre, eoa);
+
+	const factoryArtifact = await deployer.loadArtifact("WalletFactory");
+	const accountArtifact = await deployer.loadArtifact("SimpleAccount");
+
+	const factory = await deployer.deploy(
+		factoryArtifact,
+		[utils.hashBytecode(accountArtifact.bytecode)],
+		undefined,
+		[
+			// Since the factory requires the code of the multisig to be available,
+			// we should pass it here as well.
+			accountArtifact.bytecode,
+		]
+	);
+
+	return { factory, factoryArtifact, eoa, provider, accountArtifact };
+}
+
 describe("WalletFactory", function () {
-	async function setup() {
-		const provider = Provider.getDefaultProvider();
-		const eoa = new Wallet(RICH_WALLET_PK, provider);
-		const deployer = new Deployer(hre, eoa);
-
-		const factoryArtifact = await deployer.loadArtifact("WalletFactory");
-		const accountArtifact = await deployer.loadArtifact("SimpleAccount");
-
-		const factory = await deployer.deploy(
-			factoryArtifact,
-			[utils.hashBytecode(accountArtifact.bytecode)],
-			undefined,
-			[
-				// Since the factory requires the code of the multisig to be available,
-				// we should pass it here as well.
-				accountArtifact.bytecode,
-			]
-		);
-
-		return { factory, factoryArtifact, eoa, provider, accountArtifact };
-	}
-
 	it("Should deploy account contract", async function () {
-		const { factory, eoa, provider, accountArtifact, factoryArtifact } =
-			await setup();
-
-		// const inputs = encodeAbiParameters(parseAbiParameters("address owners"), [
-		// 	eoa.address as `0x${string}`,
-		// ]);
+		const { factory, eoa, provider, accountArtifact } = await setup();
 
 		const salt = ethers.constants.HashZero;
 
-		const tx = await factory.deployWallet(salt, eoa.address);
+		const owner1 = Wallet.createRandom();
+		const owner2 = Wallet.createRandom();
+
+		const tx = await factory.deployWallet(salt, [owner1.address, owner2.address]);
 		await tx.wait();
 
 		const bytecodeHash = utils.hashBytecode(accountArtifact.bytecode);
@@ -49,33 +45,20 @@ describe("WalletFactory", function () {
 
 		expect(ethers.utils.hexlify(bytecodeHash)).to.equal(fromFactory);
 
-		// const accountAddress = utils.create2Address(
-		// 	factory.address,
-		// 	fromFactory,
-		// 	ethers.constants.HashZero,
-		// 	inputs
-		// );
+		const abiCoder = new ethers.utils.AbiCoder();
+		const accountAddress = utils.create2Address(
+			factory.address,
+			fromFactory,
+			salt,
+			abiCoder.encode(["address[]"], [[owner1.address, owner2.address]])
+		);
 
-		// 	const accountContract = new ethers.Contract(
-		// 		accountAddress,
-		// 		[
-		// 			{
-		// 				inputs: [],
-		// 				name: "isWallet",
-		// 				outputs: [
-		// 					{
-		// 						internalType: "bool",
-		// 						name: "",
-		// 						type: "bool",
-		// 					},
-		// 				],
-		// 				stateMutability: "view",
-		// 				type: "function",
-		// 			},
-		// 		],
-		// 		provider
-		// 	);
+		const accountContract = new ethers.Contract(
+			accountAddress,
+			accountArtifact.abi,
+			provider
+		);
 
-		// 	expect(accountContract.isWallet()).to.equal(true);
+		expect(await accountContract.isOwner(owner1.address)).to.equal(true);
 	});
 });
