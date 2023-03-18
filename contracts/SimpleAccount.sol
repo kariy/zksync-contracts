@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "./zksync/system-contracts/interfaces/IAccount.sol";
-import "./zksync/system-contracts/libraries/TransactionHelper.sol";
-import "./zksync/system-contracts/libraries/SystemContractHelper.sol";
-import {BOOTLOADER_FORMAL_ADDRESS, NONCE_HOLDER_SYSTEM_CONTRACT, DEPLOYER_SYSTEM_CONTRACT, INonceHolder} from "./zksync/system-contracts/Constants.sol";
+import "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IAccount.sol";
+import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/TransactionHelper.sol";
+import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/SystemContractHelper.sol";
+import {BOOTLOADER_FORMAL_ADDRESS, NONCE_HOLDER_SYSTEM_CONTRACT, DEPLOYER_SYSTEM_CONTRACT, INonceHolder} from "@matterlabs/zksync-contracts/l2/system-contracts/Constants.sol";
 
 /**
  * @author Matter Labs
@@ -17,8 +17,7 @@ import {BOOTLOADER_FORMAL_ADDRESS, NONCE_HOLDER_SYSTEM_CONTRACT, DEPLOYER_SYSTEM
 contract SimpleAccount is IAccount {
     using TransactionHelper for *;
 
-    // mapping(address => bool) private owners;
-    address public owner;
+    mapping(address => bool) private owners;
 
     /**
      * @dev Simulate the behavior of the EOA if the caller is not the bootloader.
@@ -56,18 +55,14 @@ contract SimpleAccount is IAccount {
         _;
     }
 
-    function isWallet() external view returns (bool) {
-        return true;
+    constructor(address[] memory _owners) {
+        for (uint i = 0; i < _owners.length; i++) {
+            owners[_owners[i]] = true;
+        }
     }
 
-    constructor(
-        // address[] memory _owners
-        address _owner
-    ) {
-        // for (uint i = 0; i < _owners.length; i++) {
-        //     owners[_owners[i]] = true;
-        // }
-        owner = _owner;
+    function isOwner(address user) external view returns (bool) {
+        return owners[user];
     }
 
     /// @notice Validates the transaction & increments nonce.
@@ -261,10 +256,7 @@ contract SimpleAccount is IAccount {
         );
 
         address recoveredAddress = ecrecover(_hash, v, r, s);
-        // bool isValidOwner = owners[recoveredAddress];
-
-        return recoveredAddress == owner ? true : false;
-        // return isValidOwner;
+        return owners[recoveredAddress];
     }
 
     /// @notice Method for paying the bootloader for the transaction.

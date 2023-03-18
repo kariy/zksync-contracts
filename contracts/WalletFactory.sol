@@ -3,13 +3,13 @@ pragma solidity ^0.8.0;
 
 import {SimpleAccount} from "./SimpleAccount.sol";
 
-import "./zksync/system-contracts/Constants.sol";
-import {L2ContractHelper} from "./zksync/contracts/L2ContractHelper.sol";
-import {Transaction} from "./zksync/system-contracts/libraries/TransactionHelper.sol";
-import {IPaymasterFlow} from "./zksync/system-contracts/interfaces/IPaymasterFlow.sol";
-import {IContractDeployer} from "./zksync/system-contracts/interfaces/IContractDeployer.sol";
-import {SystemContractsCaller} from "./zksync/system-contracts/libraries/SystemContractsCaller.sol";
-import {IPaymaster, ExecutionResult, PAYMASTER_VALIDATION_SUCCESS_MAGIC} from "./zksync/system-contracts/interfaces/IPaymaster.sol";
+import "@matterlabs/zksync-contracts/l2/system-contracts/Constants.sol";
+import {L2ContractHelper} from "@matterlabs/zksync-contracts/l2/contracts/L2ContractHelper.sol";
+import {Transaction} from "@matterlabs/zksync-contracts/l2/system-contracts/libraries/TransactionHelper.sol";
+import {IPaymasterFlow} from "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IPaymasterFlow.sol";
+import {IContractDeployer} from "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IContractDeployer.sol";
+import {SystemContractsCaller} from "@matterlabs/zksync-contracts/l2/system-contracts/libraries/SystemContractsCaller.sol";
+import {IPaymaster, ExecutionResult, PAYMASTER_VALIDATION_SUCCESS_MAGIC} from "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IPaymaster.sol";
 
 // Factory for creating Account Contract
 // It is also a paymaster that will pay the contract deployment.
@@ -34,8 +34,7 @@ contract WalletFactory is IPaymaster {
 
     function deployWallet(
         bytes32 _salt,
-        // address[] memory owners
-        address owner
+        address[] memory owners
     ) external returns (address accountAddress) {
         (bool success, bytes memory returnData) = SystemContractsCaller
             .systemCallWithReturndata(
@@ -47,7 +46,7 @@ contract WalletFactory is IPaymaster {
                     (
                         _salt,
                         walletContractHash,
-                        abi.encode(owner),
+                        abi.encode(owners),
                         IContractDeployer.AccountAbstractionVersion.Version1
                     )
                 )
@@ -56,7 +55,7 @@ contract WalletFactory is IPaymaster {
         require(success, "Contract deployment failed");
 
         (accountAddress) = abi.decode(returnData, (address));
-        emit CreateWallet(accountAddress, abi.encode(owner));
+        emit CreateWallet(accountAddress, abi.encode(owners));
     }
 
     function validateAndPayForPaymasterTransaction(

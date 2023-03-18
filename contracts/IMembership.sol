@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 interface IMembership {
     function getMembershipStatus(address user) external view returns (uint256);
 
-    /// @dev Ideally, user's membership status should be upgraded sequentially. 
+    /// @dev Ideally, user's membership status should be upgraded sequentially.
     /// e.g., Tier 1 -> Tier 2, instead of straight away from Tier 1 -> Tier 3
     function upgradeUserMembership(address user) external returns (uint256);
 
@@ -17,7 +17,7 @@ interface IMembership {
     function subscribe() external;
 
     /**
-     * @notice Remove user from the membership. 
+     * @notice Remove user from the membership.
      * @dev Only 'subscribed' user can call this function.
      * @dev Depends on the membership rules, you may or may not decide to delete the user's record when they unsubscribe.
      */

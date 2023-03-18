@@ -16,5 +16,8 @@
 		"@nomicfoundation/hardhat-toolbox": "^2.0.2",
 		"hardhat": "^2.13.0",
 		"viem": "^0.1.21"
+	},
+	"dependencies": {
+		"@matterlabs/zksync-contracts": "^0.5.2"
 	}
 }
