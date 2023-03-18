@@ -19,6 +19,9 @@ const config: HardhatUserConfig = {
 	zksolc: {
 		version: "1.3.1",
 		compilerSource: "binary", // binary or docker (deprecated)
+		settings: {
+			isSystem: true,
+		},
 	},
 	// defaults to zkSync network
 	defaultNetwork: "zkSyncTestnet",
