@@ -1,46 +1,79 @@
-import { Wallet, Provider, utils } from "zksync-web3";
+import { Wallet, Provider, utils, types } from "zksync-web3";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 import { ethers } from "ethers";
 import { expect } from "chai";
 
-// Get private key from the environment variable
-const PRIVATE_KEY: string =
-	process.env.ZKS_PRIVATE_KEY ||
-	"0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"; // privkey from the local testnet https://github.com/matter-labs/local-setup/blob/main/rich-wallets.json
+import { RICH_WALLET_PK } from "../test/utils";
 
+// Get private key from the environment variable
+const PRIVATE_KEY: string = process.env.ZKS_PRIVATE_KEY || RICH_WALLET_PK; // privkey from the local testnet https://github.com/matter-labs/local-setup/blob/main/rich-wallets.json
+
+// IMPORTANT: THIS SCRIPT ASSUMES THAT THE FACTORY CONTRACT HAS BEEN FUNDED
 export default async function (hre: HardhatRuntimeEnvironment) {
 	const provider = Provider.getDefaultProvider();
-	const signer = new Wallet(PRIVATE_KEY, provider);
-	const deployer = new Deployer(hre, signer);
+	const wallet = new Wallet(PRIVATE_KEY, provider);
+	const deployer = new Deployer(hre, wallet);
 
 	const factoryArtifact = await deployer.loadArtifact("WalletFactory");
 	const accountArtifact = await deployer.loadArtifact("SimpleAccount");
 	const factoryContract = new ethers.Contract(
 		"0x4B5DF730c2e6b28E17013A1485E5d9BC41Efe021",
 		factoryArtifact.abi,
-		signer
+		wallet
 	);
 
 	const salt = ethers.constants.HashZero;
 
-	const tx = await factoryContract.deployWallet(salt, signer.address, {
-		gasLimit: "0x99999999",
-	});
-	await tx.wait();
+	let deployTx = await factoryContract.populateTransaction.deployWallet(salt, [
+		wallet.address,
+	]);
 
-	const bytecodeHash = utils.hashBytecode(accountArtifact.bytecode);
-	const fromFactory = await factoryContract.getAccountBytecodeHash();
+	const paymasterInterface = new ethers.utils.Interface([
+		"function general(bytes data)",
+	]);
 
-	expect(ethers.utils.hexlify(bytecodeHash)).to.equal(fromFactory);
+	const gasLimit = await provider.estimateGas(deployTx);
+	const gasPrice = await provider.getGasPrice();
+
+	// Creating transaction that utilizes paymaster feature
+	deployTx = {
+		...deployTx,
+		from: wallet.address,
+		gasLimit: gasLimit,
+		gasPrice: gasPrice,
+		chainId: (await provider.getNetwork()).chainId,
+		nonce: await provider.getTransactionCount(wallet.address),
+		type: 113,
+		customData: {
+			gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+			paymasterParams: {
+				paymaster: factoryContract.address,
+				paymasterInput: paymasterInterface.encodeFunctionData("general", [[]]),
+			},
+		} as types.Eip712Meta,
+		value: ethers.BigNumber.from(0),
+	};
+
+	const sentTx = await wallet.sendTransaction(deployTx);
+	await sentTx.wait();
+
+	// calculate deployed account address
 
 	const abiCoder = new ethers.utils.AbiCoder();
 	const accountAddress = utils.create2Address(
 		factoryContract.address,
-		fromFactory,
-		ethers.constants.HashZero,
-		abiCoder.encode(["address"], [signer.address])
+		utils.hashBytecode(accountArtifact.bytecode),
+		salt,
+		abiCoder.encode(["address[]"], [[wallet.address]])
 	);
 
-	console.log(`Account contract deployed on address ${accountAddress}`);
+	const accountContract = new ethers.Contract(
+		accountAddress,
+		accountArtifact.abi,
+		provider
+	);
+
+	expect(await accountContract.isOwner(wallet.address)).to.equal(true);
+	console.log(`Wallet is deployed at ${accountAddress}`);
 }
