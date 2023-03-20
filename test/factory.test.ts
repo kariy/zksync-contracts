@@ -96,6 +96,7 @@ describe("WalletFactory", function () {
 		const gasLimit = await provider.estimateGas(deployTx);
 		const gasPrice = await provider.getGasPrice();
 
+		// Creating transaction that utilizes paymaster feature
 		deployTx = {
 			...deployTx,
 			from: eoa.address,

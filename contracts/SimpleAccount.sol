@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {AccountMembership} from "./AccountMembership.sol";
+
 import "@matterlabs/zksync-contracts/l2/system-contracts/interfaces/IAccount.sol";
 import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/TransactionHelper.sol";
 import "@matterlabs/zksync-contracts/l2/system-contracts/libraries/SystemContractHelper.sol";
@@ -14,7 +16,7 @@ import {BOOTLOADER_FORMAL_ADDRESS, NONCE_HOLDER_SYSTEM_CONTRACT, DEPLOYER_SYSTEM
  * @notice If the caller is not a bootloader always returns empty data on call, just like EOA does.
  * @notice If it is delegate called always returns empty data, just like EOA does.
  */
-contract SimpleAccount is IAccount {
+contract SimpleAccount is IAccount, AccountMembership {
     using TransactionHelper for *;
 
     mapping(address => bool) private owners;
@@ -166,6 +168,7 @@ contract SimpleAccount is IAccount {
         bytes32, // _suggestedSignedHash
         Transaction calldata _transaction
     ) external payable override ignoreNonBootloader ignoreInDelegateCall {
+        _executeMemberships(_transaction);
         _execute(_transaction);
     }
 
@@ -179,6 +182,7 @@ contract SimpleAccount is IAccount {
     ) external payable override ignoreNonBootloader ignoreInDelegateCall {
         // The account recalculate the hash on its own
         _validateTransaction(bytes32(0), _transaction);
+        _executeMemberships(_transaction);
         _execute(_transaction);
     }
 
