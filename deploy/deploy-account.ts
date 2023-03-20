@@ -11,14 +11,16 @@ const PRIVATE_KEY: string = process.env.ZKS_PRIVATE_KEY || RICH_WALLET_PK; // pr
 
 // IMPORTANT: THIS SCRIPT ASSUMES THAT THE FACTORY CONTRACT HAS BEEN FUNDED
 export default async function (hre: HardhatRuntimeEnvironment) {
-	const provider = Provider.getDefaultProvider();
+	// @ts-ignore
+	const provider = new Provider(hre.network.zkSyncTestnet.url);
 	const wallet = new Wallet(PRIVATE_KEY, provider);
+
 	const deployer = new Deployer(hre, wallet);
 
 	const factoryArtifact = await deployer.loadArtifact("WalletFactory");
 	const accountArtifact = await deployer.loadArtifact("SimpleAccount");
 	const factoryContract = new ethers.Contract(
-		"0x4B5DF730c2e6b28E17013A1485E5d9BC41Efe021",
+		"0x950630d37c0f535E672536DC493b76C5F6cB3B65",
 		factoryArtifact.abi,
 		wallet
 	);
@@ -75,5 +77,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	);
 
 	expect(await accountContract.isOwner(wallet.address)).to.equal(true);
-	console.log(`Wallet is deployed at ${accountAddress}`);
+
+	console.log(`Transaction ${sentTx.hash} submitted.`);
+	console.log(`Wallet is deployed at ${accountAddress}.`);
 }

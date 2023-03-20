@@ -3,14 +3,13 @@ import { Wallet, Provider, utils } from "zksync-web3";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 
+import { RICH_WALLET_PK } from "../test/utils";
+
 // Get private key from the environment variable
-const PRIVATE_KEY: string =
-	process.env.ZKS_PRIVATE_KEY ||
-	"0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110"; // privkey from the local testnet https://github.com/matter-labs/local-setup/blob/main/rich-wallets.json
+const PRIVATE_KEY: string = process.env.ZKS_PRIVATE_KEY || RICH_WALLET_PK; // privkey from the local testnet https://github.com/matter-labs/local-setup/blob/main/rich-wallets.json
 
 export default async function (hre: HardhatRuntimeEnvironment) {
-	const provider = Provider.getDefaultProvider();
-	const eoa = new Wallet(PRIVATE_KEY, provider);
+	const eoa = new Wallet(PRIVATE_KEY);
 	const deployer = new Deployer(hre, eoa);
 
 	const factoryArtifact = await deployer.loadArtifact("WalletFactory");
@@ -40,7 +39,7 @@ async function fundFactoryContractForPaymasterReason(
 		await wallet.sendTransaction({
 			to: factory.address,
 			// You can increase the amount of ETH sent to the multisig
-			value: ethers.utils.parseEther("2"),
+			value: ethers.utils.parseEther("0.5"),
 		})
 	).wait();
 
